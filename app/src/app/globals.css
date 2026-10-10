@@ -1,0 +1,124 @@
+@import "tailwindcss";
+
+/* ---------- Theme tokens ---------- */
+:root {
+  --bg: #f4f5fb;
+  --surface: #ffffff;
+  --soft: #eceef8;
+  --fg: #151833;
+  --muted: #666b8a;
+  --line: #e1e4f0;
+  --accent: #5b5bf0;
+  --accent-2: #8a5cf6;
+  --accent-soft: #e9e9ff;
+  --ok-bg: #dcf7e6;  --ok-fg: #15753c;
+  --bad-bg: #ffe3e3; --bad-fg: #b42323;
+  --warn-bg: #fff1d6; --warn-fg: #8a5a00;
+  --shadow: 0 1px 2px rgb(20 24 60 / 0.05), 0 4px 16px rgb(20 24 60 / 0.05);
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0c0e1a;
+  --surface: #151829;
+  --soft: #1e2238;
+  --fg: #e9ebfa;
+  --muted: #9aa0c3;
+  --line: #272c48;
+  --accent: #8187ff;
+  --accent-2: #a98bff;
+  --accent-soft: #25295a;
+  --ok-bg: #123524;  --ok-fg: #6ee7a0;
+  --bad-bg: #3d1618; --bad-fg: #ff9a9a;
+  --warn-bg: #3a2c0c; --warn-fg: #ffd37a;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 6px 20px rgb(0 0 0 / 0.25);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-soft: var(--soft);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-soft: var(--accent-soft);
+  --color-ok-bg: var(--ok-bg);
+  --color-ok-fg: var(--ok-fg);
+  --color-bad-bg: var(--bad-bg);
+  --color-bad-fg: var(--bad-fg);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-fg: var(--warn-fg);
+  --font-sans: var(--font-geist-sans);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+/* ---------- Shared components ---------- */
+.card {
+  @apply rounded-2xl border border-line bg-surface p-5;
+  box-shadow: var(--shadow);
+}
+.input {
+  @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-fg outline-none transition placeholder:text-muted/70 focus:border-accent;
+}
+.input:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-110 active:scale-[0.98] disabled:opacity-50;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-surface px-3.5 py-2 text-sm font-medium text-fg transition hover:bg-soft active:scale-[0.98] disabled:opacity-50;
+}
+.btn-danger {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-surface px-3.5 py-2 text-sm font-medium text-bad-fg transition hover:bg-bad-bg;
+}
+.label {
+  @apply mb-1.5 block text-sm font-medium;
+}
+.alert-error {
+  @apply rounded-xl bg-bad-bg px-3.5 py-2.5 text-sm text-bad-fg;
+}
+.alert-ok {
+  @apply rounded-xl bg-ok-bg px-3.5 py-2.5 text-sm text-ok-fg;
+}
+.badge {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+}
+.chip {
+  @apply whitespace-nowrap rounded-full border border-line bg-surface px-3.5 py-1.5 text-sm font-medium transition hover:bg-soft;
+}
+.chip-active {
+  @apply border-transparent text-white;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+.page-title {
+  @apply text-2xl font-bold tracking-tight sm:text-3xl;
+}
+.grad-text {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.hide-scroll {
+  scrollbar-width: none;
+}
+.hide-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

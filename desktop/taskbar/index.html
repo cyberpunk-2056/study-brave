@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Focus Study taskbar</title>
+<link rel="stylesheet" href="taskbar.css">
+</head>
+<body>
+<div id="scrim" hidden></div>
+
+<!-- ===== Left panels ===== -->
+<section class="panel left" id="panel-notifs" hidden aria-label="Notifications">
+  <header><h2>Notifications</h2><button class="link" id="notifs-clear">Clear all</button></header>
+  <ul class="list" id="notifs-list"></ul>
+  <p class="empty" id="notifs-empty">You&apos;re all caught up.</p>
+</section>
+
+<section class="panel left" id="panel-messages" hidden aria-label="Messages">
+  <header><h2>Messages</h2><button class="link" id="messages-readall">Mark all as read</button></header>
+  <ul class="list" id="messages-list"></ul>
+  <p class="empty" id="messages-empty">No messages yet. Your admin or parent can send you one.</p>
+</section>
+
+<section class="panel left" id="panel-todo" hidden aria-label="To-do list">
+  <header><h2>To-do list</h2><span class="sync" id="todo-sync"></span></header>
+  <form id="todo-form" class="row"><input id="todo-input" maxlength="120" placeholder="Add a task…" autocomplete="off" aria-label="New task"><button class="primary" aria-label="Add task">+</button></form>
+  <ul class="list" id="todo-list"></ul>
+  <p class="empty" id="todo-empty">Nothing planned. Add your first task ✨</p>
+</section>
+
+<!-- ===== Right panels ===== -->
+<section class="panel right" id="panel-wifi" hidden aria-label="Wi-Fi">
+  <header><h2>Wi-Fi</h2><span class="actions"><button class="link" id="wifi-refresh">Refresh</button><button class="link danger" id="wifi-disconnect" hidden>Disconnect</button></span></header>
+  <p class="status" id="wifi-status"></p>
+  <ul class="list" id="wifi-list"></ul>
+  <p class="empty" id="wifi-empty" hidden></p>
+  <p class="error" id="wifi-error" hidden></p>
+</section>
+
+<section class="panel right narrow" id="panel-volume" hidden aria-label="Volume">
+  <header><h2>Volume</h2></header>
+  <div id="vol-exact">
+    <div class="row vol"><button class="icon-btn" id="vol-mute" aria-label="Mute"></button><input type="range" id="vol-slider" min="0" max="100" aria-label="Volume"><span id="vol-label">–</span></div>
+  </div>
+  <div id="vol-steps" hidden>
+    <p class="muted small">Exact level isn&apos;t available on this PC. Use the volume keys:</p>
+    <div class="row steps"><button class="chip" data-key="down">– Down</button><button class="chip" data-key="mute">Mute</button><button class="chip" data-key="up">+ Up</button></div>
+  </div>
+  <p class="error" id="vol-error" hidden></p>
+</section>
+
+<section class="panel right narrow" id="panel-battery" hidden aria-label="Battery">
+  <header><h2>Battery</h2></header>
+  <div class="battery-big"><div id="battery-pct">–</div><div id="battery-text" class="muted"></div></div>
+</section>
+
+<section class="panel right" id="panel-clock" hidden aria-label="Date and time">
+  <div class="clock-big" id="clock-big"></div>
+  <div class="muted" id="clock-date"></div>
+  <div class="cal" id="cal"></div>
+</section>
+
+<!-- ===== The bar ===== -->
+<footer class="bar" role="toolbar" aria-label="Taskbar">
+  <div class="group">
+    <button class="tb" data-panel="notifs" aria-label="Notifications" title="Notifications"><span id="ic-bell"></span><span class="badge" id="b-notifs" hidden></span></button>
+    <button class="tb" data-panel="messages" aria-label="Messages" title="Messages from admin / parent"><span id="ic-mail"></span><span class="badge" id="b-messages" hidden></span></button>
+    <button class="tb" data-panel="todo" aria-label="To-do list" title="To-do list"><span id="ic-todo"></span><span class="badge soft" id="b-todo" hidden></span></button>
+  </div>
+  <button class="center" id="ticker" hidden></button>
+  <div class="group right-group">
+    <button class="tb" data-panel="wifi" id="wifi-btn" aria-label="Wi-Fi" title="Wi-Fi"><span id="ic-wifi"></span><span class="label" id="wifi-label"></span></button>
+    <button class="tb" data-panel="volume" aria-label="Volume" title="Volume"><span id="ic-volume"></span></button>
+    <button class="tb" data-panel="battery" id="battery-btn" hidden aria-label="Battery" title="Battery"><span id="ic-battery"></span><span class="label" id="battery-label"></span></button>
+    <button class="tb clock" data-panel="clock" aria-label="Date and time"><b id="time">--:--</b><small id="date"></small></button>
+  </div>
+</footer>
+
+<script src="taskbar.js"></script>
+</body>
+</html>

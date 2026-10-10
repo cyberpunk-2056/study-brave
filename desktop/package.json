@@ -1,0 +1,72 @@
+{
+  "name": "focus-study-desktop",
+  "version": "1.0.0",
+  "description": "Locked-down desktop browser for Focus Study",
+  "main": "main.js",
+  "author": "Focus Study",
+  "license": "UNLICENSED",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "selftest": "electron .",
+    "dist:dir": "electron-builder --win --dir",
+    "dist": "electron-builder --win nsis --x64 --arm64"
+  },
+  "devDependencies": {
+    "electron": "^44.7.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.focusstudy.desktop",
+    "productName": "Focus Study",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "store.js",
+      "offline-session.js",
+      "sysaudio.js",
+      "wifi.js",
+      "tasks.js",
+      "inbox.js",
+      "offline/**",
+      "taskbar/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "config.json",
+        "to": "config.json"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "artifactName": "Focus-Study-Setup-${version}-${arch}.${ext}"
+    },
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableCookieEncryption": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    }
+  }
+}

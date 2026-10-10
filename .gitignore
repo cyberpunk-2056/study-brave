@@ -1,0 +1,31 @@
+# ---- secrets: never upload ----
+.env
+.env.*
+!.env.example
+# contains the app key; copy desktop/config.example.json to desktop/config.json locally
+desktop/config.json
+
+# ---- dependencies and build output ----
+node_modules/
+.next/
+out/
+dist/
+build.log
+*.log
+
+# ---- local data and test leftovers ----
+app/data/
+app/backups/
+backups/
+*.tmp
+*.tmp.*
+*.bak
+shots/
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+next-env.d.ts
+*.tsbuildinfo
