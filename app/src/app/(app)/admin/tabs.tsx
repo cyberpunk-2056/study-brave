@@ -7,6 +7,8 @@ const tabs = [
   ["/admin", "Overview"],
   ["/admin/users", "Users"],
   ["/admin/channels", "Approved channels"],
+  ["/admin/sites", "Course sites"],
+  ["/admin/support", "Support"],
   ["/admin/announcements", "Announcements"],
 ];
 

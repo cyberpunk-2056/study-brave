@@ -137,6 +137,30 @@ $bmp.Save('${file}', [System.Drawing.Imaging.ImageFormat]::Png)`;
       report.notifications = await js(`[...document.querySelectorAll('#notifs-list .t')].map(n => n.textContent)`);
       await shot("7-notifications-panel");
 
+      // ---- Pomodoro timer: website sidebar <-> taskbar chip ----
+      const page = (code) => ctx.wc().executeJavaScript(code);
+      const clickStartInPage = `(() => { const sec = document.querySelector('aside [aria-label="Pomodoro timer"], [aria-label="Pomodoro timer"]'); const b = [...document.querySelectorAll('button')].find((x) => /^\s*(Start|Resume)\s*$/.test(x.textContent) && x.closest('aside')); if (!b) return false; b.click(); return true; })()`;
+      report.timerSidebarPresent = await page(`!!document.querySelector('aside [aria-label="Pomodoro timer"]')`);
+      report.timerChipBefore = { hidden: await js(`document.getElementById('timer-btn').hidden`), time: await text("#timer-time") };
+      report.timerStartClicked = await page(clickStartInPage);
+      await wait(2600);
+      report.timerChipRunning = { hidden: await js(`document.getElementById('timer-btn').hidden`), time: await text("#timer-time"), running: await js(`document.getElementById('timer-btn').classList.contains('running')`) };
+      await click("#timer-btn");
+      await wait(900);
+      report.timerPanel = { big: await text("#timer-big"), toggle: await text("#timer-toggle"), enabled: await js(`!document.getElementById('timer-toggle').disabled`) };
+      await shot("9-timer-panel");
+      await click("#timer-toggle"); // pause from the taskbar
+      await wait(1800);
+      report.timerAfterPause = { toggle: await text("#timer-toggle"), pageSaysPaused: await page(`!![...document.querySelectorAll('aside button')].find((x) => /Resume/.test(x.textContent))`) };
+      await click("#timer-toggle"); // resume
+      await wait(1500);
+      report.timerAfterResume = await text("#timer-toggle");
+      report.timerAfterResumePage = await page(`[...document.querySelectorAll('aside button')].map((x) => x.textContent.trim()).filter(Boolean).slice(0, 6)`);
+      await wait(2500);
+      report.timerAfterResumeLater = await text("#timer-toggle");
+      await click("#timer-toggle"); // pause again so nothing keeps running
+      await wait(800);
+
       // ---- Escape closes a panel and the bar shrinks back ----
       await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))`);
       await wait(700);

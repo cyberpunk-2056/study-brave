@@ -4,7 +4,8 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { run } from "@/lib/db";
-import { requireUser } from "@/lib/session";
+import { clearHits, isLimited, minutes, recordHit } from "@/lib/ratelimit";
+import { createSession, requireUser } from "@/lib/session";
 import type { FormState } from "./auth";
 
 const profileSchema = z.object({
@@ -23,10 +24,22 @@ export async function updateProfile(_: FormState, form: FormData): Promise<FormS
 
 export async function changePassword(_: FormState, form: FormData): Promise<FormState> {
   const user = await requireUser();
-  const current = String(form.get("current") ?? "");
+  const current = String(form.get("current") ?? "").slice(0, 200);
   const next = String(form.get("next") ?? "");
-  if (!(await bcrypt.compare(current, user.passwordHash))) return { error: "Current password is wrong" };
+
+  // Someone at an unlocked laptop must not be able to guess the current password.
+  const key = `chpw:user:${user.id}`;
+  const lim = await isLimited(key, 5);
+  if (lim.limited) return { error: `Too many attempts. Try again in ${minutes(lim.retryAfterSec)} minutes.` };
+  if (!(await bcrypt.compare(current, user.passwordHash))) {
+    await recordHit(key, 15 * 60_000);
+    return { error: "Current password is wrong" };
+  }
   if (next.length < 8) return { error: "New password must be at least 8 characters" };
-  await run("UPDATE AppUser SET passwordHash = ? WHERE id = ?", await bcrypt.hash(next, 10), user.id);
-  return { ok: "Password changed" };
+  if (next.length > 72) return { error: "New password is too long (max 72 characters)" };
+
+  await run("UPDATE AppUser SET passwordHash = ?, passwordChangedAt = ? WHERE id = ?", await bcrypt.hash(next, 10), Date.now(), user.id);
+  await clearHits(key);
+  await createSession(user.id); // every OTHER login is now invalid; this device gets a fresh one
+  return { ok: "Password changed. You were signed out on other devices." };
 }

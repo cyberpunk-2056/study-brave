@@ -3,6 +3,7 @@ import Link from "next/link";
 import { changePassword, updateProfile } from "@/app/actions/profile";
 import { removeChannel } from "@/app/actions/study";
 import { Icon } from "@/components/Icon";
+import { LogoutPanel } from "@/components/LogoutPanel";
 import { SimpleForm } from "@/components/SimpleForm";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { all, get, type Channel } from "@/lib/db";
@@ -110,6 +111,8 @@ export default async function Profile() {
         </ul>
         {channels.length === 0 && <p className="text-sm text-muted">No channels added yet.</p>}
       </div>
+
+      <LogoutPanel needsCode={user.role === "STUDENT" && user.strictMode > 0} hasParentEmail={!!user.parentEmail} />
     </div>
   );
 }

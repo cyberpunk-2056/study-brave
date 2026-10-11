@@ -19,6 +19,23 @@ async function main() {
     await msg("PARENT", "Parent", "Proud of you! Remember to take a break and drink water.", 120_000);
     await run("INSERT INTO Announcement (id,message,createdAt) VALUES (?,?,?)", "selftest-ann", "Mock test on Saturday at 10 AM.", now - 3_600_000);
   }
+  if (process.argv.includes("--demo")) {
+    // Sample data so every page has something to show: tasks, an exam, ~3 weeks of study, saved + watched videos.
+    for (const [i, t] of ["Finish Chapter 4", "Revise formulas", "Practice past paper"].entries())
+      await run("INSERT INTO Task (id,userId,title,done,createdAt) VALUES (?,?,?,?,?)", newId(), id, t, i === 2 ? 1 : 0, now - i * 1000);
+    await run("INSERT INTO Exam (id,userId,name,examDate) VALUES (?,?,?,?)", newId(), id, "Maths final", new Date(now + 12 * 86400_000).toISOString().slice(0, 10));
+    const subjects = ["Physics", "Maths", "Chemistry"];
+    for (let d = 0; d < 21; d++) {
+      if (d % 4 === 3) continue;
+      const at = now - d * 86400_000 - 3 * 3600_000;
+      await run("INSERT INTO StudySession (id,userId,kind,subject,seconds,startedAt) VALUES (?,?,?,?,?,?)", newId(), id, "FOCUS", subjects[d % 3], 1200 + ((d * 733) % 3600), at);
+      await run("INSERT INTO StudySession (id,userId,kind,subject,seconds,startedAt) VALUES (?,?,?,?,?,?)", newId(), id, "SITTING", "Sitting", 900 + ((d * 311) % 1800), at);
+    }
+    await run("INSERT INTO Channel (id,userId,ytId,title,thumbnail,uploadsId,createdAt) VALUES (?,NULL,?,?,?,?,?)", newId(), "UC4a-Gbdw7vOaccHmFo40b9g", "Khan Academy", null, "UU4a-Gbdw7vOaccHmFo40b9g", now);
+    await run("INSERT INTO SavedVideo (userId,videoId,title,thumbnail,channelTitle,channelId,duration,savedAt) VALUES (?,?,?,?,?,?,?,?)", id, "dQw4w9WgXcQ", "Sample saved lesson", "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg", "Khan Academy", "UC4a-Gbdw7vOaccHmFo40b9g", "12:34", now);
+    await run("INSERT INTO WatchHistory (userId,videoId,title,thumbnail,channelTitle,channelId,duration,watchedAt) VALUES (?,?,?,?,?,?,?,?)", id, "dQw4w9WgXcQ", "Sample watched lesson", "https://i.ytimg.com/vi/dQw4w9WgXcQ/mqdefault.jpg", "Khan Academy", "UC4a-Gbdw7vOaccHmFo40b9g", "12:34", now - 3600_000);
+  }
+  if (process.argv.includes("--relaxed")) await run("UPDATE AppUser SET strictMode = 0 WHERE id = ?", id);
   const admin = await get<{ id: string }>("SELECT id FROM AppUser WHERE role = 'ADMIN' ORDER BY createdAt LIMIT 1");
   console.log([id, await sign(id), await sign(admin!.id)].join(" "));
   await closeDb();

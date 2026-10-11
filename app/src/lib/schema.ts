@@ -9,7 +9,8 @@
 
 export const TABLES = [
   "AppUser", "PasswordReset", "Channel", "StudySession", "SavedVideo", "WatchHistory", "Task", "Exam",
-  "UnlockCode", "LockEvent", "FocusRun", "OfflineSync", "Message", "Announcement",
+  "UnlockCode", "LockEvent", "FocusRun", "OfflineSync", "Message", "Announcement", "RateLimit", "ExternalSite",
+  "SiteRequest",
 ] as const;
 
 export const SCHEMA = `
@@ -84,6 +85,32 @@ CREATE INDEX IF NOT EXISTS message_user ON Message (userId, createdAt);
 CREATE TABLE IF NOT EXISTS Announcement (
   id TEXT PRIMARY KEY, message TEXT NOT NULL, createdAt BIGINT NOT NULL
 );
+-- Counters for login / signup / password-reset attempt limits (see lib/ratelimit.ts).
+CREATE TABLE IF NOT EXISTS RateLimit (
+  key TEXT PRIMARY KEY, count INTEGER NOT NULL DEFAULT 0, resetAt BIGINT NOT NULL
+);
+-- Admin-approved outside websites (e.g. a purchased course site) a student may open inside the desktop app.
+-- userId NULL = approved for every student, same convention as Channel.
+CREATE TABLE IF NOT EXISTS ExternalSite (
+  id TEXT PRIMARY KEY, userId TEXT REFERENCES AppUser(id) ON DELETE CASCADE,
+  domain TEXT NOT NULL, title TEXT NOT NULL, addedBy TEXT NOT NULL, createdAt BIGINT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS extsite_owner_domain ON ExternalSite (COALESCE(userId, ''), domain);
+-- A student's request to open a course site, waiting for (or already given) an admin decision.
+CREATE TABLE IF NOT EXISTS SiteRequest (
+  id TEXT PRIMARY KEY, userId TEXT NOT NULL REFERENCES AppUser(id) ON DELETE CASCADE,
+  domain TEXT NOT NULL, title TEXT NOT NULL, reason TEXT,
+  status TEXT NOT NULL DEFAULT 'PENDING', adminNote TEXT,
+  createdAt BIGINT NOT NULL, decidedAt BIGINT, decidedBy TEXT
+);
+CREATE INDEX IF NOT EXISTS siterequest_user ON SiteRequest (userId, createdAt);
+CREATE INDEX IF NOT EXISTS siterequest_status ON SiteRequest (status, createdAt);
+-- Added after the first release: logins issued before this moment are no longer valid (set when the password changes).
+ALTER TABLE AppUser ADD COLUMN IF NOT EXISTS passwordChangedAt BIGINT;
+-- Support chat: a student can now write into Message too (fromRole = 'STUDENT'). "read" tracks whether the admin
+-- has seen a student's message yet (defaults to 1/read, so it's only meaningfully 0 on new student messages —
+-- existing admin/parent rows, and the taskbar's own unread badge, are untouched by this).
+ALTER TABLE Message ADD COLUMN IF NOT EXISTS read INTEGER NOT NULL DEFAULT 1;
 
 -- Block Supabase's public REST API: RLS on, no policies. (The app's own connection bypasses RLS.)
 ${TABLES.map((t) => `ALTER TABLE ${t} ENABLE ROW LEVEL SECURITY;`).join("\n")}

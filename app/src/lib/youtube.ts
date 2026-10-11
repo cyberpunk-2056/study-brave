@@ -36,6 +36,7 @@ type ChannelsResp = {
     contentDetails: { relatedPlaylists: { uploads: string } };
     statistics?: { subscriberCount?: string; hiddenSubscriberCount?: boolean; videoCount?: string };
     brandingSettings?: { image?: { bannerExternalUrl?: string } };
+    topicDetails?: { topicCategories?: string[] };
   }[];
 };
 
@@ -60,20 +61,56 @@ export async function channelById(ytId: string): Promise<ChannelInfo | null> {
   return c ? toChannel(c) : null;
 }
 
-/** Search all of YouTube for channels by name (costs ~101 quota units, cached for an hour). */
+// ---------- Keeping the search bar to study/education channels ----------
+// YouTube's search endpoint has no "education only" filter for channels, so results are over-fetched and then
+// filtered here: by topic (Wikipedia categories YouTube itself assigns to the channel) first, and by keywords in
+// the name/description as a fallback when a channel has no topic data. Unclear channels are left out rather than
+// shown, since the student asked for study channels, not "everything that isn't obviously off-topic".
+const EDU_TOPICS = [
+  "education", "knowledge", "science", "technology", "mathematics", "physics", "chemistry", "biology",
+  "engineering", "language", "literature", "philosophy", "humanities", "society", "university",
+];
+// Broad patterns (not an exhaustive list) so every video-game genre, not just a few named ones, counts as off-topic.
+const OFFTOPIC_TOPIC_PATTERN = /game|music|entertainment|film|television|sport|fashion|lifestyle|physical_attractiveness|food|pet|humour|religion/;
+const STUDY_WORDS =
+  /\b(education|educational|learn(?:ing)?|study|studies|student|teach(?:er|ing)?|tutor(?:ial)?|lectures?|lessons?|courses?|academy|academics?|school|college|university|class(?:es)?\s*(?:\d|[xvi]+)|exam(?:s|ination)?|revision|syllabus|curriculum|homework|cbse|icse|ncert|jee|neet|gate\b|upsc|ssc\b|sat\b|gre\b|gmat\b|ielts|toefl|physics|chemistry|biology|mathematics|\bmaths?\b|algebra|calculus|geometry|trigonometry|science|engineering|programming|coding|computer science|history|geography|economics|accounting|grammar|vocabulary|essay|board exam|gk\b|general knowledge)\b/i;
+const OFFTOPIC_WORDS =
+  /\b(gameplay|gaming|let'?s play|walkthrough|speedrun|unboxing|prank(?:s)?|vlog(?:s|ging)?|official music video|lyrics?|full movie|movie trailer|highlights?|reaction(?:s)?|roast(?:s)?|stand[\s-]?up comedy|makeup tutorial|beauty hacks|fashion haul|dating advice|celebrity gossip|meme(?:s)?|funny moments|asmr|workout routine)\b/i;
+
+function topicSlug(url: string) {
+  return decodeURIComponent(url.split("/").pop() ?? "").toLowerCase();
+}
+
+function isStudyRelated(c: NonNullable<ChannelsResp["items"]>[number]): boolean {
+  const topics = (c.topicDetails?.topicCategories ?? []).map(topicSlug);
+  if (topics.some((t) => EDU_TOPICS.some((k) => t.includes(k)))) return true;
+  const onlyOfftopic = topics.length > 0 && topics.every((t) => OFFTOPIC_TOPIC_PATTERN.test(t));
+  if (onlyOfftopic) return false;
+
+  const text = `${c.snippet.title} ${c.snippet.description ?? ""}`;
+  if (OFFTOPIC_WORDS.test(text) && !STUDY_WORDS.test(text)) return false;
+  return STUDY_WORDS.test(text);
+}
+
+/** Search all of YouTube for channels by name, kept to study/education channels (cached for an hour). */
 export async function searchChannels(q: string, max = 10): Promise<ChannelInfo[]> {
   const query = q.trim();
   if (!query) return [];
+  // Over-fetch: filtering removes some results, so ask YouTube for more than we plan to show.
   const found = await yt<{ items?: { id: { channelId: string } }[] }>(
     "search",
-    { part: "snippet", type: "channel", maxResults: String(max), q: query },
+    { part: "snippet", type: "channel", maxResults: String(Math.min(50, max * 3)), q: query },
     3600,
   );
   const ids = (found.items ?? []).map((i) => i.id.channelId);
   if (ids.length === 0) return [];
-  const data = await yt<ChannelsResp>("channels", { part: CH_PARTS, id: ids.join(",") }, 3600);
-  const byId = new Map((data.items ?? []).map((c) => [c.id, toChannel(c)]));
-  return ids.map((id) => byId.get(id)).filter((c): c is ChannelInfo => !!c);
+  const data = await yt<ChannelsResp>("channels", { part: `${CH_PARTS},topicDetails`, id: ids.join(",") }, 3600);
+  const byId = new Map((data.items ?? []).map((c) => [c.id, c]));
+  return ids
+    .map((id) => byId.get(id))
+    .filter((c): c is NonNullable<typeof c> => !!c && isStudyRelated(c))
+    .slice(0, max)
+    .map(toChannel);
 }
 
 /** Accepts a channel URL, @handle, UC... id, or a plain name (falls back to search). */

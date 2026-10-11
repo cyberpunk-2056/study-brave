@@ -16,7 +16,7 @@ export async function reportLockEvent(kind: LockEventKind) {
 }
 
 /** Student asks for a code. It is emailed to the parent and the admins — never returned to the browser. */
-export async function requestUnlockCode(): Promise<LockResult> {
+export async function requestUnlockCode(purpose: "stop" | "logout" = "stop"): Promise<LockResult> {
   const user = await requireUser();
   const lastHour = (await get<{ n: number }>(
     "SELECT COUNT(*) n FROM UnlockCode WHERE userId = ? AND issuedBy = 'SELF' AND createdAt > ?",
@@ -27,7 +27,7 @@ export async function requestUnlockCode(): Promise<LockResult> {
   const code = await createUnlockCode(user.id, "SELF");
   await logLock(user.id, "CODE_REQUESTED");
   try {
-    const sent = await mailUnlockCode(user, code, "is asking to stop a study session early.");
+    const sent = await mailUnlockCode(user, code, purpose === "logout" ? "is asking to log out of Focus Study." : "is asking to stop a study session early.");
     if (sent === 0) return { error: "No parent or admin email is set up. Ask your admin to add one." };
     return { ok: user.parentEmail ? "Code sent to your parent and the admin. Ask them for it." : "Code sent to the admin. Ask them for it." };
   } catch (e) {

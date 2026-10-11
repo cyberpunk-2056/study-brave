@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { get, newId, run } from "@/lib/db";
+import { isLimited, minutes, recordHit } from "@/lib/ratelimit";
 import { requireUser } from "@/lib/session";
+import { normalizeDomain } from "@/lib/sites";
 import { resolveChannel } from "@/lib/youtube";
 import type { FormState } from "./auth";
 
@@ -42,6 +44,7 @@ export async function logSession(kind: "BREAK" | "SITTING", subject: string, sec
     newId(), user.id, kind, subject.trim().slice(0, 40) || "General", secs, Math.floor(startedAt),
   );
   revalidatePath("/dashboard");
+  revalidatePath("/overview");
   revalidatePath("/analytics");
 }
 
@@ -50,6 +53,7 @@ export async function setGoal(form: FormData) {
   const min = Math.max(10, Math.min(1000, Number(form.get("minutes")) || 120));
   await run("UPDATE AppUser SET dailyGoalMin = ? WHERE id = ?", min, user.id);
   revalidatePath("/dashboard");
+  revalidatePath("/overview");
 }
 
 // ---------- Channels (by id, from search results / channel page) ----------
@@ -96,4 +100,32 @@ export async function clearHistory() {
   const user = await requireUser();
   await run("DELETE FROM WatchHistory WHERE userId = ?", user.id);
   revalidatePath("/history");
+}
+
+// ---------- Requesting a course site ----------
+// A student can't approve their own course sites — this only creates a PENDING request an admin has to accept or
+// reject (see app/actions/admin.ts: approveSiteRequest / rejectSiteRequest).
+export async function requestExternalSite(_: FormState, form: FormData): Promise<FormState> {
+  const user = await requireUser();
+  const domain = normalizeDomain(String(form.get("domain") ?? ""));
+  if (!domain) return { error: "Enter a plain domain, e.g. udemy.com" };
+  const title = String(form.get("title") ?? "").trim().slice(0, 60) || domain;
+  const reason = String(form.get("reason") ?? "").trim().slice(0, 200) || null;
+
+  if (await get("SELECT 1 FROM ExternalSite WHERE (userId = ? OR userId IS NULL) AND domain = ?", user.id, domain))
+    return { error: "That site is already approved for you." };
+  if (await get("SELECT 1 FROM SiteRequest WHERE userId = ? AND domain = ? AND status = 'PENDING'", user.id, domain))
+    return { error: "You already asked for this site — waiting on your admin." };
+
+  const key = `siterequest:user:${user.id}`;
+  const lim = await isLimited(key, 10);
+  if (lim.limited) return { error: `Too many requests. Try again in ${minutes(lim.retryAfterSec)} minutes.` };
+  await recordHit(key, 24 * 60 * 60_000);
+
+  await run(
+    "INSERT INTO SiteRequest (id, userId, domain, title, reason, createdAt) VALUES (?,?,?,?,?,?)",
+    newId(), user.id, domain, title, reason, Date.now(),
+  );
+  revalidatePath("/courses");
+  return { ok: "Sent to your admin. You'll see it here once they decide." };
 }

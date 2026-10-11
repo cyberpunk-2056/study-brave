@@ -22,6 +22,7 @@ export type User = {
   strictMode: number; // 0 off, 1 timer locks the screen, 2 the desktop app is required (students only)
   parentEmail: string | null;
   offlineSecret: string | null; // used to check unlock codes without internet
+  passwordChangedAt: number | null; // logins issued before this are no longer valid
 };
 
 export type Channel = {
@@ -37,16 +38,38 @@ export type Channel = {
 export type StudySession = {
   id: string;
   userId: string;
-  kind: "FOCUS" | "BREAK" | "SITTING";
+  kind: "FOCUS" | "BREAK" | "SITTING" | "COURSE";
   subject: string;
   seconds: number;
   startedAt: number;
 };
 
+export type ExternalSite = {
+  id: string;
+  userId: string | null; // null = approved by admin for every student
+  domain: string;
+  title: string;
+  addedBy: string;
+  createdAt: number;
+};
+
+export type SiteRequest = {
+  id: string;
+  userId: string;
+  domain: string;
+  title: string;
+  reason: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  adminNote: string | null;
+  createdAt: number;
+  decidedAt: number | null;
+  decidedBy: string | null;
+};
+
 export type Task = { id: string; userId: string; title: string; done: number; createdAt: number };
 export type Exam = { id: string; userId: string; name: string; examDate: string };
 export type OfflineSyncRow = { clientId: string; userId: string; claimedSec: number; creditedSec: number; flagged: number; reason: string | null; startedAt: number; syncedAt: number };
-export type Message = { id: string; userId: string; fromRole: "ADMIN" | "PARENT"; fromName: string; body: string; createdAt: number };
+export type Message = { id: string; userId: string; fromRole: "ADMIN" | "PARENT" | "STUDENT"; fromName: string; body: string; createdAt: number; read: number };
 export type LockEvent = { id: string; userId: string; kind: string; at: number };
 export type Announcement = { id: string; message: string; createdAt: number };
 export type SavedVideo = {

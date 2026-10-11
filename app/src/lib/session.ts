@@ -9,6 +9,7 @@ const key = () => new TextEncoder().encode(process.env.SESSION_SECRET);
 export async function createSession(userId: string) {
   const token = await new SignJWT({ uid: userId })
     .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
     .setExpirationTime("14d")
     .sign(key());
   (await cookies()).set(COOKIE, token, {
@@ -31,6 +32,8 @@ export async function getUser() {
     const { payload } = await jwtVerify(token, key());
     const user = await userById(String(payload.uid));
     if (!user || user.disabled) return null;
+    // A password change signs out every login that was issued before it (1 s tolerance for second rounding).
+    if (user.passwordChangedAt && (payload.iat ?? 0) * 1000 + 1000 < user.passwordChangedAt) return null;
     return user;
   } catch {
     return null;

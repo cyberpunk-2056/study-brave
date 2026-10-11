@@ -25,6 +25,8 @@
     "files": [
       "main.js",
       "preload.js",
+      "uninstall-gate-preload.js",
+      "uninstall-gate.html",
       "store.js",
       "offline-session.js",
       "sysaudio.js",
@@ -55,9 +57,10 @@
     },
     "nsis": {
       "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": false,
       "createDesktopShortcut": true,
+      "include": "build/installer.nsh",
       "artifactName": "Focus-Study-Setup-${version}-${arch}.${ext}"
     },
     "electronFuses": {

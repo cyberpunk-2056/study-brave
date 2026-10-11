@@ -19,6 +19,11 @@ const P = {
   info: "M12 8h.01 M11 12h1v5h1 M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z",
   globe: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z M3 12h18 M12 3c3 3 3 15 0 18 M12 3c-3 3-3 15 0 18",
   download: "M12 3v12 M7 10l5 5 5-5 M4 21h16",
+  home: "M4 11.5 12 4l8 7.5V20a1 1 0 0 1-1 1h-5v-7h-4v7H5a1 1 0 0 1-1-1z",
+  close: "M6 6l12 12 M18 6L6 18",
+  camera: "M4 8h3l2-2h6l2 2h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z M12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  power: "M12 2v8 M18.4 6.6a9 9 0 1 1-12.8 0",
+  restart: "M3 12a9 9 0 1 0 2.6-6.3 M3 3v6h6",
 };
 const svg = (names, size = 20, extra = "") => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" ${extra}>${[].concat(names).map((n) => `<path d="${P[n]}"/>`).join("")}</svg>`;
 /** Wi-Fi icon with 0-4 active arcs. */
@@ -44,6 +49,19 @@ function volumeSvg(level, muted) {
 $("ic-bell").innerHTML = svg("bell");
 $("ic-mail").innerHTML = svg("mail");
 $("ic-todo").innerHTML = svg("todo");
+$("ic-home").innerHTML = svg("home", 20);
+$("home-btn").addEventListener("click", async () => {
+  const btn = $("home-btn");
+  if (btn.disabled) return;
+  btn.disabled = true;
+  const r = await B.home.go();
+  if (r && r.ok === false) showTicker(`<b>Can&apos;t go home right now</b> ${esc(r.error || "")}`);
+  setTimeout(() => (btn.disabled = false), 500);
+});
+$("ic-screenshot").innerHTML = svg("camera", 18);
+$("ic-power").innerHTML = svg("power", 20);
+$("ic-restart").innerHTML = svg("restart", 18);
+$("ic-shutdown").innerHTML = svg("power", 18);
 
 let current = null; // name of the open panel, or null
 
@@ -97,18 +115,23 @@ tick();
 let loadersReady = true;
 
 // ---------- panels ----------
-const PANELS = { notifs: "panel-notifs", messages: "panel-messages", todo: "panel-todo", wifi: "panel-wifi", volume: "panel-volume", battery: "panel-battery", clock: "panel-clock" };
+const PANELS = { notifs: "panel-notifs", messages: "panel-messages", timer: "panel-timer", todo: "panel-todo", wifi: "panel-wifi", volume: "panel-volume", battery: "panel-battery", clock: "panel-clock", power: "panel-power" };
 const loaders = { clock: () => { $('cal').dataset.day = ''; drawClock(); } };
 
 async function openPanel(name) {
   if (current === name) return closePanel();
-  if (!current) await B.setOpen(true); // the app enlarges this view so the panel has room above the bar
+  // Show the panel's content FIRST, then ask the app to enlarge this view. Doing it the other way round (enlarge,
+  // then reveal) leaves a brief gap where the view is already full-window-sized but still only has the closed,
+  // 52px-tall bar painted in it — on some GPUs that gap shows up as a stretched/flickering duplicate of the bar.
+  // Rendering the panel while the view is still small costs nothing (it's simply off-screen until the resize).
+  const wasClosed = !current;
   if (current) $(PANELS[current]).hidden = true;
   current = name;
   document.querySelectorAll(".tb").forEach((b) => b.classList.toggle("active", b.dataset.panel === name));
   $("scrim").hidden = false;
   $(PANELS[name]).hidden = false;
   loaders[name] && loaders[name]();
+  if (wasClosed) await B.setOpen(true);
 }
 async function closePanel() {
   if (!current) return;
@@ -291,18 +314,26 @@ async function connectTo(n, password, control) {
   if (r.ok) scanWifi();
 }
 
-async function scanWifi() {
-  if (scanning) return;
-  scanning = true;
-  $("wifi-refresh").textContent = "Scanning…";
-  const r = await B.wifi.scan();
-  scanning = false;
-  $("wifi-refresh").textContent = "Refresh";
+function showNetworks(r) {
   const ul = $("wifi-list");
+  if (document.querySelector("#wifi-list .pw")) return; // do not wipe a password the user is typing
   ul.innerHTML = "";
   $("wifi-empty").hidden = r.ok && r.networks.length > 0;
   $("wifi-empty").textContent = r.ok ? "No networks found nearby." : r.error || "Wi-Fi is not available on this PC.";
   if (r.ok) r.networks.forEach((n) => ul.appendChild(networkRow(n)));
+}
+// Like the Windows Wi-Fi flyout: show what Windows already knows at once, then ask the adapter for a fresh scan.
+async function scanWifi() {
+  if (scanning) return;
+  scanning = true;
+  $("wifi-refresh").textContent = "Scanning…";
+  try {
+    showNetworks(await B.wifi.scan());
+    showNetworks(await B.wifi.scan({ fresh: true }));
+  } finally {
+    scanning = false;
+    $("wifi-refresh").textContent = "Refresh";
+  }
 }
 loaders.wifi = async () => {
   showWifiError("");
@@ -318,6 +349,7 @@ $("wifi-disconnect").addEventListener("click", async () => {
   scanWifi();
 });
 setInterval(refreshWifiStatus, 10000);
+setInterval(() => { if (current === "wifi" && !document.querySelector("#wifi-list .pw")) scanWifi(); }, 12000); // keeps the open list up to date
 refreshWifiStatus();
 
 // ---------- volume ----------
@@ -326,12 +358,18 @@ function renderVolume() {
   $("ic-volume").innerHTML = volumeSvg(vol.volume, vol.muted);
   $("vol-mute").innerHTML = volumeSvg(vol.volume, vol.muted);
   $("vol-slider").value = vol.volume;
-  $("vol-label").textContent = vol.muted ? "Mute" : `${vol.volume}`;
+  $("vol-slider").style.setProperty("--fill", `${vol.muted ? 0 : vol.volume}%`);
+  $("vol-label").textContent = vol.muted ? "Mute" : `${vol.volume}%`;
+  // Current level on the taskbar button itself: a number and a small bar.
+  $("vol-pct").textContent = vol.exact ? (vol.muted ? "Mute" : `${vol.volume}%`) : "";
+  $("vol-mini").hidden = !vol.exact;
+  $("vol-mini-fill").style.width = `${vol.muted ? 0 : vol.volume}%`;
+  document.querySelector('[data-panel="volume"]').title = vol.exact ? `Volume: ${vol.muted ? "muted" : vol.volume + "%"}` : "Volume";
   $("vol-exact").hidden = !vol.exact;
   $("vol-steps").hidden = vol.exact;
 }
 async function loadVolume() {
-  const r = await B.volume.get();
+  const r = await B.volume.get().catch(() => ({ error: true }));
   if (r.error) {
     vol = { volume: 50, muted: false, exact: false };
   } else vol = { volume: r.volume, muted: r.muted, exact: true };
@@ -339,6 +377,9 @@ async function loadVolume() {
 }
 loaders.volume = loadVolume;
 let volTimer;
+let dragging = false;
+$("vol-slider").addEventListener("pointerdown", () => (dragging = true));
+window.addEventListener("pointerup", () => setTimeout(() => (dragging = false), 400));
 $("vol-slider").addEventListener("input", () => {
   vol.volume = Number($("vol-slider").value);
   vol.muted = false;
@@ -353,6 +394,8 @@ $("vol-mute").addEventListener("click", async () => {
 });
 document.querySelectorAll("#vol-steps [data-key]").forEach((b) => b.addEventListener("click", () => B.volume.key(b.dataset.key)));
 loadVolume();
+// Follows changes made elsewhere (keyboard volume keys, other apps); not while the slider is being dragged.
+setInterval(() => { if (!dragging) loadVolume(); }, 2500);
 
 // ---------- battery (only shown on laptops) ----------
 async function loadBattery() {
@@ -370,6 +413,112 @@ async function loadBattery() {
 loaders.battery = loadBattery;
 setInterval(loadBattery, 30000);
 loadBattery();
+
+// ---------- Pomodoro timer (shown while the website's timer or an offline session exists) ----------
+let timer = null;
+const ringSvg = (frac, brk) => `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke-width="3" style="transform:rotate(-90deg)">
+  <circle cx="12" cy="12" r="9" stroke="var(--soft)"/><circle cx="12" cy="12" r="9" stroke="${brk ? "var(--ok)" : "var(--accent)"}" stroke-linecap="round" stroke-dasharray="56.5" stroke-dashoffset="${56.5 * (1 - frac)}"/></svg>`;
+const clock = (sec) => `${String(Math.floor(Math.max(0, sec) / 60)).padStart(2, "0")}:${String(Math.round(Math.max(0, sec)) % 60).padStart(2, "0")}`;
+
+function renderTimer() {
+  const btn = $("timer-btn");
+  btn.hidden = !timer;
+  if (!timer) {
+    if (current === "timer") closePanel();
+    return;
+  }
+  const brk = timer.phase === "BREAK";
+  const frac = timer.totalSec ? 1 - timer.remainingSec / timer.totalSec : 0;
+  btn.className = "tb timer-chip" + (brk ? " break" : "") + (timer.running ? " running" : "") + (current === "timer" ? " active" : "");
+  $("timer-ring").innerHTML = ringSvg(Math.min(1, Math.max(0, frac)), brk);
+  $("timer-time").textContent = clock(timer.remainingSec);
+  $("timer-label").textContent = (brk ? "Break" : "Focus") + (timer.locked ? " 🔒" : "");
+  if (current === "timer") {
+    $("timer-phase").textContent = brk ? "Break" : "Focus";
+    $("timer-big").textContent = clock(timer.remainingSec);
+    $("timer-fill").style.width = `${Math.min(100, Math.max(0, frac * 100))}%`;
+    $("timer-fill").className = "bar-fill" + (brk ? " break" : "");
+    $("timer-meta").textContent = `${timer.subject || (brk ? "Take a break" : "No subject")} · round ${timer.round}${timer.source === "offline" ? " · offline session" : ""}`;
+    const canToggle = timer.source === "web" && !(timer.running && timer.locked);
+    $("timer-toggle").textContent = timer.running ? (timer.locked ? "🔒 Locked until the timer ends" : "Pause") : timer.started ? "Resume" : "Start";
+    $("timer-toggle").disabled = !canToggle;
+  }
+}
+async function pollTimer() {
+  try {
+    timer = await B.timer.get();
+  } catch {
+    timer = null;
+  }
+  renderTimer();
+}
+loaders.timer = () => {
+  $("timer-error").hidden = true;
+  renderTimer();
+};
+$("timer-toggle").addEventListener("click", async () => {
+  const r = await B.timer.toggle();
+  $("timer-error").hidden = !r || r.ok !== false;
+  if (r && r.ok === false) $("timer-error").textContent = r.error || "Could not change the timer.";
+  setTimeout(pollTimer, 250);
+});
+setInterval(pollTimer, 1000);
+pollTimer();
+
+// ---------- Open course sites (like running-app buttons on a Linux/Windows taskbar) ----------
+// One chip per open site. Click a chip: if it's the one currently showing, minimize it (back to Focus Study);
+// otherwise bring it to the front (maximizing it, and minimizing whatever was showing). Hover a chip to reveal
+// a close (x) button that shuts that one site down for good.
+let courseSites = [];
+function renderCourseList() {
+  const list = $("course-list");
+  list.innerHTML = "";
+  for (const s of courseSites) {
+    const wrap = el("div", "course-chip-wrap");
+    const btn = el(
+      "button",
+      "tb course-chip" + (s.front ? " active running" : ""),
+      `${svg(s.isUtility ? "mail" : "globe", 16)}<span class="label">${esc(s.title)}</span>`,
+    );
+    btn.setAttribute("aria-label", (s.front ? "Minimize " : "Open ") + s.title);
+    btn.title = s.front ? `${s.title} — click to minimize` : `${s.title} — click to open`;
+    btn.addEventListener("click", () => B.course.toggle(s.domain));
+    const close = el("button", "course-chip-close", svg("close", 11));
+    close.setAttribute("aria-label", "Close " + s.title);
+    close.title = "Close " + s.title;
+    close.addEventListener("click", (e) => {
+      e.stopPropagation();
+      B.course.close(s.domain);
+    });
+    wrap.appendChild(btn);
+    wrap.appendChild(close);
+    list.appendChild(wrap);
+  }
+}
+async function pollCourseList() {
+  try {
+    courseSites = await B.course.list();
+  } catch {
+    courseSites = [];
+  }
+  renderCourseList();
+}
+setInterval(pollCourseList, 3000);
+pollCourseList();
+
+// ---------- screenshot ----------
+$("screenshot-btn").addEventListener("click", async () => {
+  const btn = $("screenshot-btn");
+  if (btn.disabled) return;
+  btn.disabled = true;
+  await B.screenshot.take(); // the app shows a "Screenshot saved" notification itself once it's written
+  setTimeout(() => (btn.disabled = false), 800); // avoid a burst of captures from a held-down key or fast double click
+});
+
+// ---------- power (shut down / restart the real PC) ----------
+// Executes right away on click, the same way the real Windows power flyout does — no extra confirm step.
+$("power-restart").addEventListener("click", () => B.power.restart());
+$("power-shutdown").addEventListener("click", () => B.power.shutdown());
 
 // ---------- ticker in the middle of the bar ----------
 let tickerTimer;
@@ -404,6 +553,10 @@ B.onEvent((e) => {
   }
   if (e.type === "tasks" && current === "todo") loadTodo();
   if (e.type === "tasks") loadTodo();
+  if (e.type === "course") {
+    courseSites = e.sites;
+    renderCourseList();
+  }
 });
 
 // initial badges

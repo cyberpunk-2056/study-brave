@@ -118,6 +118,42 @@ function buildProfile(ssid, password) {
 </WLANProfile>`;
 }
 
+// Windows keeps a cached list that can contain only the connected network. The real Windows Wi-Fi button asks the
+// adapter to scan first (WlanScan); so do we, then read the list.
+const SCAN_SCRIPT = `
+$ErrorActionPreference = 'Stop'
+Add-Type -TypeDefinition @'
+using System; using System.Runtime.InteropServices;
+public static class WlanTrigger {
+  [DllImport("wlanapi.dll")] static extern uint WlanOpenHandle(uint v, IntPtr r, out uint n, out IntPtr h);
+  [DllImport("wlanapi.dll")] static extern uint WlanEnumInterfaces(IntPtr h, IntPtr r, out IntPtr list);
+  [DllImport("wlanapi.dll")] static extern uint WlanScan(IntPtr h, ref Guid g, IntPtr a, IntPtr b, IntPtr c);
+  [DllImport("wlanapi.dll")] static extern void WlanFreeMemory(IntPtr p);
+  [DllImport("wlanapi.dll")] static extern uint WlanCloseHandle(IntPtr h, IntPtr r);
+  public static int Run() {
+    uint neg; IntPtr h; if (WlanOpenHandle(2, IntPtr.Zero, out neg, out h) != 0) return -1;
+    IntPtr list; int count = 0;
+    if (WlanEnumInterfaces(h, IntPtr.Zero, out list) == 0) {
+      int n = Marshal.ReadInt32(list, 0);
+      for (int i = 0; i < n; i++) {
+        byte[] gb = new byte[16]; Marshal.Copy(IntPtr.Add(list, 8 + i * 532), gb, 0, 16);
+        Guid g = new Guid(gb); if (WlanScan(h, ref g, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero) == 0) count++;
+      }
+      WlanFreeMemory(list);
+    }
+    WlanCloseHandle(h, IntPtr.Zero); return count;
+  }
+}
+'@
+[WlanTrigger]::Run()
+`;
+
+const triggerScan = () =>
+  new Promise((resolve) => {
+    const encoded = Buffer.from(SCAN_SCRIPT, "utf16le").toString("base64");
+    execFile("powershell.exe", ["-NoProfile", "-NoLogo", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded], { windowsHide: true, timeout: 12000 }, (err, stdout) => resolve(!err && parseInt(String(stdout).trim(), 10) > 0));
+  });
+
 function createWifi() {
   let lastScan = [];
 
@@ -127,7 +163,8 @@ function createWifi() {
     return parseInterfaces(r.out);
   }
 
-  async function scan() {
+  async function scan({ fresh = false } = {}) {
+    if (fresh && (await triggerScan())) await new Promise((r) => setTimeout(r, 2500)); // the adapter needs a moment to hear the networks
     const [nets, profiles] = await Promise.all([netsh(["wlan", "show", "networks", "mode=bssid"]), netsh(["wlan", "show", "profiles"])]);
     if (!nets.ok && !nets.out) return { ok: false, error: "No Wi-Fi adapter was found.", networks: [] };
     const known = new Set(parseProfiles(profiles.out));

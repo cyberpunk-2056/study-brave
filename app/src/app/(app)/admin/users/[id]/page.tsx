@@ -26,7 +26,7 @@ export default async function AdminUser({ params }: { params: Promise<{ id: stri
   const count = (k: string) => counts.find((c) => c.kind === k)?.n ?? 0;
   const LABEL: Record<string, string> = {
     FULLSCREEN_EXIT: "Left full-screen", TAB_SWITCH: "Switched tab", RELOAD: "Reloaded page",
-    CODE_REQUESTED: "Asked for unlock code", CODE_FAILED: "Wrong unlock code", UNLOCKED_WITH_CODE: "Unlocked with code",
+    CODE_REQUESTED: "Asked for unlock code", CODE_FAILED: "Wrong unlock code", UNLOCKED_WITH_CODE: "Unlocked with code", LOGOUT_WITH_CODE: "Logged out with code",
     HEARTBEAT_LOST: "Lost contact mid-session (app closed / offline)", APP_REQUIRED: "Tried to study outside the desktop app", APP_RESTARTED: "App restarted mid-session (shutdown / crash)", OFFLINE_SYNCED: "Offline session synced", OFFLINE_FLAGGED: "Offline session flagged (clock mismatch / invalid)",
   };
   const info: [string, string][] = [
@@ -87,7 +87,7 @@ export default async function AdminUser({ params }: { params: Promise<{ id: stri
           <div>
             <h3 className="mb-2 text-sm font-semibold">Last 7 days</h3>
             <div className="flex flex-wrap gap-2 text-sm">
-              {["FULLSCREEN_EXIT", "TAB_SWITCH", "RELOAD", "HEARTBEAT_LOST", "APP_RESTARTED", "OFFLINE_SYNCED", "OFFLINE_FLAGGED", "APP_REQUIRED", "CODE_REQUESTED", "UNLOCKED_WITH_CODE"].map((k) => (
+              {["FULLSCREEN_EXIT", "TAB_SWITCH", "RELOAD", "HEARTBEAT_LOST", "APP_RESTARTED", "OFFLINE_SYNCED", "OFFLINE_FLAGGED", "APP_REQUIRED", "CODE_REQUESTED", "UNLOCKED_WITH_CODE", "LOGOUT_WITH_CODE"].map((k) => (
                 <span key={k} className={`badge ${count(k) ? "bg-warn-bg text-warn-fg" : "bg-soft text-muted"}`}>{LABEL[k]}: {count(k)}</span>
               ))}
             </div>

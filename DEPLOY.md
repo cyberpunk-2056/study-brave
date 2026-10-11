@@ -43,6 +43,11 @@ the `SMTP_*` details for email. See `app/.env.example` for every setting.
    ```
 3. In Supabase → **Table editor** you should now see the tables (AppUser, Task, StudySession, …) with RLS enabled.
 
+> **Updating an existing deployment:** always run `npm run db:migrate` against Supabase **before** deploying new code.
+> It only adds things (the `RateLimit` table, the `passwordChangedAt` column used by login protection, the
+> `ExternalSite` table used by admin-approved course websites, the `SiteRequest` table for a student's requests to
+> approve a new one, and a `read` column on `Message` used by the admin's Support inbox) and never deletes data.
+
 ## 4. Put the code on GitHub
 Create a new **private** repository and push the whole project folder (it contains `app/` and `desktop/`).
 `.env` files are ignored by git, so your secrets are not uploaded. Never commit them.

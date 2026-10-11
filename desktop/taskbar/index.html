@@ -22,6 +22,15 @@
   <p class="empty" id="messages-empty">No messages yet. Your admin or parent can send you one.</p>
 </section>
 
+<section class="panel left narrow" id="panel-timer" hidden aria-label="Pomodoro timer">
+  <header><h2>Pomodoro timer</h2><span class="tag" id="timer-phase">Focus</span></header>
+  <div class="timer-big" id="timer-big">25:00</div>
+  <div class="bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100"><div class="bar-fill" id="timer-fill"></div></div>
+  <p class="muted small" id="timer-meta"></p>
+  <button class="primary wide" id="timer-toggle">Start</button>
+  <p class="error" id="timer-error" hidden></p>
+</section>
+
 <section class="panel left" id="panel-todo" hidden aria-label="To-do list">
   <header><h2>To-do list</h2><span class="sync" id="todo-sync"></span></header>
   <form id="todo-form" class="row"><input id="todo-input" maxlength="120" placeholder="Add a task…" autocomplete="off" aria-label="New task"><button class="primary" aria-label="Add task">+</button></form>
@@ -61,19 +70,34 @@
   <div class="cal" id="cal"></div>
 </section>
 
+<section class="panel right narrow" id="panel-power" hidden aria-label="Power">
+  <header><h2>Power</h2></header>
+  <button class="power-opt" id="power-restart"><span id="ic-restart"></span><span>Restart</span></button>
+  <button class="power-opt danger" id="power-shutdown"><span id="ic-shutdown"></span><span>Shut down</span></button>
+</section>
+
 <!-- ===== The bar ===== -->
 <footer class="bar" role="toolbar" aria-label="Taskbar">
+  <button class="tb home-btn" id="home-btn" aria-label="Go to Home" title="Home">
+    <span id="ic-home"></span>
+  </button>
   <div class="group">
     <button class="tb" data-panel="notifs" aria-label="Notifications" title="Notifications"><span id="ic-bell"></span><span class="badge" id="b-notifs" hidden></span></button>
     <button class="tb" data-panel="messages" aria-label="Messages" title="Messages from admin / parent"><span id="ic-mail"></span><span class="badge" id="b-messages" hidden></span></button>
     <button class="tb" data-panel="todo" aria-label="To-do list" title="To-do list"><span id="ic-todo"></span><span class="badge soft" id="b-todo" hidden></span></button>
   </div>
+  <button class="tb timer-chip" id="timer-btn" data-panel="timer" hidden aria-label="Pomodoro timer" title="Pomodoro timer">
+    <span id="timer-ring"></span><b id="timer-time">25:00</b><span class="label" id="timer-label">Focus</span>
+  </button>
+  <div class="group" id="course-list" aria-label="Open course sites"></div>
   <button class="center" id="ticker" hidden></button>
   <div class="group right-group">
+    <button class="tb" id="screenshot-btn" aria-label="Take a screenshot" title="Take a screenshot"><span id="ic-screenshot"></span></button>
     <button class="tb" data-panel="wifi" id="wifi-btn" aria-label="Wi-Fi" title="Wi-Fi"><span id="ic-wifi"></span><span class="label" id="wifi-label"></span></button>
-    <button class="tb" data-panel="volume" aria-label="Volume" title="Volume"><span id="ic-volume"></span></button>
+    <button class="tb" data-panel="volume" aria-label="Volume" title="Volume"><span id="ic-volume"></span><span class="label vol-pct" id="vol-pct"></span><span class="vol-mini" id="vol-mini" hidden><i id="vol-mini-fill"></i></span></button>
     <button class="tb" data-panel="battery" id="battery-btn" hidden aria-label="Battery" title="Battery"><span id="ic-battery"></span><span class="label" id="battery-label"></span></button>
     <button class="tb clock" data-panel="clock" aria-label="Date and time"><b id="time">--:--</b><small id="date"></small></button>
+    <button class="tb" data-panel="power" id="power-btn" aria-label="Power" title="Power"><span id="ic-power"></span></button>
   </div>
 </footer>
 

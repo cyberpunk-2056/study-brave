@@ -62,7 +62,7 @@ body {
 
 /* ---------- Shared components ---------- */
 .card {
-  @apply rounded-2xl border border-line bg-surface p-5;
+  @apply min-w-0 rounded-2xl border border-line bg-surface p-5;
   box-shadow: var(--shadow);
 }
 .input {
@@ -122,3 +122,32 @@ body {
     animation: none !important;
   }
 }
+
+/* ---------- polish ---------- */
+html { scroll-behavior: smooth; -webkit-tap-highlight-color: transparent; }
+html, body { max-width: 100%; overflow-x: clip; } /* nothing may push the page sideways */
+.page-enter { animation: page-in 0.22s ease-out both; }
+@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.drawer-enter { animation: drawer-in 0.2s ease-out both; }
+@keyframes drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.drawer-left-enter { animation: drawer-left-in 0.2s ease-out both; }
+@keyframes drawer-left-in { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+.backdrop-enter { animation: backdrop-in 0.2s ease-out both; }
+@keyframes backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* clear keyboard focus ring on everything clickable */
+a:focus-visible, button:focus-visible, summary:focus-visible, [role="button"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+button:disabled { cursor: not-allowed; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .page-enter, .drawer-enter, .drawer-left-enter, .backdrop-enter { animation: none; }
+}
+
+/* No visible scroll bars anywhere (scrolling still works with wheel, touch, keyboard). */
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; }

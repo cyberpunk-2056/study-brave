@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Focus Study — Uninstall</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font: 14px/1.4 system-ui, sans-serif; margin: 0; padding: 22px; background: #15182b; color: #eceefa; }
+  h1 { font-size: 16px; margin: 0 0 8px; }
+  p { color: #aab0d4; margin: 0 0 16px; }
+  input { width: 100%; box-sizing: border-box; font-size: 20px; letter-spacing: 0.3em; text-align: center; padding: 10px; border-radius: 10px; border: 1px solid #39406e; background: #1f2340; color: #fff; outline: none; }
+  input:focus { border-color: #7c82ff; }
+  .row { display: flex; gap: 8px; margin-top: 14px; }
+  button { flex: 1; padding: 10px; border-radius: 10px; border: none; font-size: 14px; cursor: pointer; }
+  #go { background: #7c82ff; color: #fff; font-weight: 600; }
+  #go:disabled { opacity: 0.5; cursor: default; }
+  #cancel { background: #262b4c; color: #eceefa; }
+  #msg { min-height: 18px; margin-top: 10px; font-size: 13px; color: #ff8a8a; }
+</style>
+</head>
+<body>
+  <h1>A parent/admin code is needed to uninstall</h1>
+  <p>Ask your parent or admin for the uninstall code — it's the same code shown in the admin panel. Closing this window also cancels the uninstall.</p>
+  <input id="code" inputmode="numeric" maxlength="6" placeholder="000000" autofocus>
+  <div class="row">
+    <button id="cancel">Cancel</button>
+    <button id="go" disabled>Continue</button>
+  </div>
+  <div id="msg"></div>
+<script>
+  const code = document.getElementById("code");
+  const go = document.getElementById("go");
+  const msg = document.getElementById("msg");
+  code.addEventListener("input", () => {
+    code.value = code.value.replace(/\D/g, "").slice(0, 6);
+    go.disabled = code.value.length !== 6;
+  });
+  code.addEventListener("keydown", (e) => { if (e.key === "Enter" && !go.disabled) go.click(); });
+  document.getElementById("cancel").addEventListener("click", () => window.gate.cancel());
+  go.addEventListener("click", async () => {
+    go.disabled = true;
+    const r = await window.gate.check(code.value);
+    if (r && r.ok) { msg.style.color = "#8aff9e"; msg.textContent = "Code accepted. Continuing…"; return; }
+    code.value = "";
+    go.disabled = true;
+    msg.textContent = r && r.locked ? "Too many wrong tries. Uninstall cancelled." : `Wrong code. ${r ? r.triesLeft : 0} tries left.`;
+    code.focus();
+  });
+</script>
+</body>
+</html>

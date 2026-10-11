@@ -4,7 +4,7 @@ import { sendMail } from "./mail";
 
 export const CODE_TTL_MS = 15 * 60 * 1000;
 export const MAX_ATTEMPTS = 5;
-export const LOCK_EVENT_KINDS = ["FULLSCREEN_EXIT", "TAB_SWITCH", "RELOAD", "UNLOCKED_WITH_CODE", "CODE_REQUESTED", "CODE_FAILED", "HEARTBEAT_LOST", "APP_REQUIRED", "APP_RESTARTED", "OFFLINE_SYNCED", "OFFLINE_FLAGGED"] as const;
+export const LOCK_EVENT_KINDS = ["FULLSCREEN_EXIT", "TAB_SWITCH", "RELOAD", "UNLOCKED_WITH_CODE", "CODE_REQUESTED", "CODE_FAILED", "LOGOUT_WITH_CODE", "HEARTBEAT_LOST", "APP_REQUIRED", "APP_RESTARTED", "OFFLINE_SYNCED", "OFFLINE_FLAGGED"] as const;
 /** Kinds the browser/app may report itself; everything else is written by the server only. */
 export const CLIENT_EVENT_KINDS: readonly LockEventKind[] = ["FULLSCREEN_EXIT", "TAB_SWITCH", "RELOAD", "APP_RESTARTED"];
 export type LockEventKind = (typeof LOCK_EVENT_KINDS)[number];
